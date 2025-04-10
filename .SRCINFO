@@ -1,0 +1,21 @@
+pkgbase = storage-kween
+	pkgdesc = An elegant GUI storage cleaner for Arch Linux users
+	pkgver = 0.1.0
+	pkgrel = 1
+	url = https://github.com/drain/storage-kween
+	arch = any
+	license = MIT
+	makedepends = git
+	depends = python
+	depends = python-dearpygui
+	depends = fdupes
+	depends = util-linux
+	depends = pacman-contrib
+	optdepends = zenity: optional GUI dialogs
+	optdepends = file: media type detection
+	optdepends = imagemagick: image analysis
+	optdepends = python-pillow: image processing
+	source = storage-kween::git+https://github.com/drain/storage-kween.git
+	md5sums = SKIP
+
+pkgname = storage-kween

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Storage Kween
+Comment=An elegant Arch storage cleaner with GUI and sass
+Exec=storage-kween
+Icon=storage-kween
+Terminal=false
+Type=Application
+Categories=Utility;System;
+StartupNotify=true
