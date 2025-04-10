@@ -13,21 +13,25 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
 
-      - name: Set up SSH
+      - name: Setup SSH Agent
         uses: webfactory/ssh-agent@v0.5.4
         with:
-          ssh-private-key: ${{ secrets.AUR_DEPLOY_KEY }}
+          ssh-private-key: |
+            ${{ secrets.AUR_DEPLOY_KEY }}
 
-      - name: Clone AUR Repo
+      - name: Configure Git
+        run: |
+          git config --global user.name "Storage Queen Bot"
+          git config --global user.email "bot@storagequeen.arch"
+
+      - name: Clone AUR repo
         run: |
           git clone ssh://aur@aur.archlinux.org/storage-kween.git aur-out
 
-      - name: Copy Files to AUR Repo
+      - name: Copy and Push Files
         run: |
           cp PKGBUILD .SRCINFO storage-kween.py storage-kween.desktop aur-out/
           cd aur-out
-          git config user.name "Storage Queen Bot"
-          git config user.email "bot@storagequeen.arch"
           git add .
           git commit -m "release: ${{ github.ref_name }}"
           git push
