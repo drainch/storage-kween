@@ -1,88 +1,34 @@
-#!/usr/bin/env python3
+name: Auto AUR Release
 
-from dearpygui.dearpygui import *
-import os
-import subprocess
-import time
+on:
+  push:
+    tags:
+      - 'v*'
 
-REQUIRED_COMMANDS = ["du", "find", "fdupes", "paccache", "pacman", "lsblk", "free", "uname"]
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
 
-def check_dependencies():
-    missing = []
-    for cmd in REQUIRED_COMMANDS:
-        if subprocess.call(f"command -v {cmd}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) != 0:
-            missing.append(cmd)
-    if missing:
-        print("Missing system tools:", ", ".join(missing))
-        print("\nInstall them using your package manager:")
-        print("sudo pacman -S " + " ".join(missing))
-        exit(1)
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
 
-def run_command_safe(command):
-    try:
-        output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, text=True)
-        return output.strip()
-    except subprocess.CalledProcessError as e:
-        return f"⚠️ Error: {e.output.strip()}"
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.AUR_DEPLOY_KEY }}
 
-check_dependencies()
+      - name: Clone AUR Repo
+        run: |
+          git clone ssh://aur@aur.archlinux.org/storage-kween.git aur-out
 
-create_context()
-set_global_font_scale(1.25)
-set_theme("Gold")
-create_viewport(title="Storage Queen 👑", width=900, height=600)
-setup_dearpygui()
+      - name: Copy Files to AUR Repo
+        run: |
+          cp PKGBUILD .SRCINFO storage-kween.py storage-kween.desktop aur-out/
+          cd aur-out
+          git config user.name "Storage Queen Bot"
+          git config user.email "bot@storagequeen.arch"
+          git add .
+          git commit -m "release: ${{ github.ref_name }}"
+          git push
 
-results_cache = ""
-
-def update_panel(label, content):
-    delete_item("main_panel", children_only=True)
-    add_text(label, parent="main_panel")
-    add_separator(parent="main_panel")
-    add_text(content, parent="main_panel", wrap=800)
-
-def run_analyzer(sender, app_data, user_data):
-    update_panel("📊 Disk Analyzer", "Scanning disk usage...")
-    output = run_command_safe("du -h --max-depth=1 ~ | sort -hr | head -n 15")
-    update_panel("📊 Disk Analyzer", output)
-
-def clean_junk(sender, app_data, user_data):
-    update_panel("🧹 Junk Cleaner", "Cleaning pacman cache and logs...")
-    output = run_command_safe("paccache -r")
-    output2 = run_command_safe("sudo rm -rf /var/log/*.log")
-    update_panel("🧹 Junk Cleaner", f"{output}\n{output2}\nDone cleaning. Your majesty's filesystem is fresh.")
-
-def find_large_files(sender, app_data, user_data):
-    update_panel("🔍 Large Files", "Locating large files (this may take a moment)...")
-    output = run_command_safe("find ~ -type f -exec du -h {} + | sort -hr | head -n 15")
-    update_panel("🔍 Large Files", output)
-
-def find_duplicates(sender, app_data, user_data):
-    update_panel("🧂 Duplicates", "Scanning Downloads folder for duplicates...")
-    output = run_command_safe("fdupes -r ~/Downloads | head -n 40")
-    if not output:
-        output = "No duplicates found in ~/Downloads."
-    update_panel("🧂 Duplicates", output)
-
-def safe_delete_mode(sender, app_data, user_data):
-    update_panel("💣 Safe Delete", "Coming soon: queued deletions and mercy prompts!")
-
-with window(label="Storage Queen 👑", width=900, height=600):
-    with group(horizontal=True):
-        with child_window(width=180, border=True):
-            add_button(label="📊 Analyze", callback=run_analyzer)
-            add_button(label="🧹 Clean Junk", callback=clean_junk)
-            add_button(label="🔍 Large Files", callback=find_large_files)
-            add_button(label="🧂 Duplicates", callback=find_duplicates)
-            add_button(label="💣 Safe Delete", callback=safe_delete_mode)
-        with child_window(tag="main_panel", width=700, height=550, border=True):
-            add_text("👑 Welcome to Storage Queen\nClick a button to begin.", wrap=700)
-    add_text("Built for the Arch community, with love.", bullet=True)
-
-try:
-    show_viewport()
-    start_dearpygui()
-except KeyboardInterrupt:
-    print("👑 Storage Queen was dismissed by the court.")
-finally:
-    destroy_context()
